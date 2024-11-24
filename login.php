@@ -1,4 +1,6 @@
 <?php
+session_start(); // بدء الجلسة
+
 include_once 'Database.php';
 include_once 'User.php';
 
@@ -11,9 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $user->password = $_POST['password'];
 
     if ($user->login()) {
+        // تخزين userID في الجلسة
+        $_SESSION['userID'] = $user->getUserID(); // استدعاء الدالة التي تعيد userID
         echo "<script>alert('تم تسجيل الدخول بنجاح.'); window.location.href='home.php';</script>";
     } else {
-        echo "<script>alert('فشل تسجيل الدخول.');</script>";
+        echo "<script>alert('فشل تسجيل الدخول. يرجى التحقق من البيانات.');</script>";
     }
 }
 ?>
@@ -99,7 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <nav>
     <a href="home.php">الصفحة الرئيسية</a>
     <a href="register.php">تسجيل مستخدم جديد</a>
- 
 </nav>
 
 <div class="container">

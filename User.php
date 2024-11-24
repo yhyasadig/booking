@@ -3,7 +3,7 @@ class User {
     private $conn;
     private $table_name = "users";
 
-    public $userid;
+    public $userid; // معرف المستخدم
     public $username;
     public $email;
     public $password;
@@ -38,6 +38,7 @@ class User {
             if ($stmt->rowCount() > 0) {
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (password_verify($this->password, $row['password'])) {
+                    $this->userid = $row['userid']; // تعيين معرف المستخدم بعد التحقق
                     return true;
                 }
             }
@@ -46,6 +47,11 @@ class User {
             echo "خطأ في تسجيل الدخول: " . $exception->getMessage();
             return false;
         }
+    }
+
+    // إضافة دالة لاسترجاع معرف المستخدم
+    public function getUserID() {
+        return $this->userid;
     }
 
     public function updateProfile() {

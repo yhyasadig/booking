@@ -2,6 +2,7 @@
 include_once 'Database.php';
 include_once 'User.php';
 
+session_start(); // بدء الجلسة
 $db = new Database();
 $conn = $db->getConnection();
 
