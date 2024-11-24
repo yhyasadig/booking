@@ -93,12 +93,12 @@
         <a href="register.php">تسجيل مستخدم جديد</a>
         <a href="login.php">تسجيل دخول</a>
         <a href="Event_Page.php">الأحداث </a>
-   
     </nav>
 
     <div class="event-offerings">
-        <h2>عروض مباريات </h2>
+        <h2>عروض مباريات</h2>
         <div class="offering-container">
+            <!-- العروض الثابتة -->
             <div class="offering-box">
                 <img src="barvsreal.jpg" alt="برشلونة ضد ريال مدريد">
                 <h3>برشلونة ضد ريال مدريد</h3>
@@ -111,6 +111,39 @@
                 <p>التاريخ: 2023-08-15</p>
                 <a href="book_ticket.php" class="booking-btn">شراء التذاكر</a>
             </div>
+
+            <!-- العروض من قاعدة البيانات -->
+            <?php
+            // الاتصال بقاعدة البيانات
+            $host = "localhost";
+            $dbname = "booking_system";
+            $username = "root";
+            $password = "";
+
+            try {
+                $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                // جلب الأحداث من نوع "عرض كرة قدم"
+                $query = "SELECT * FROM events WHERE eventType = 'عرض كرة قدم'";
+                $stmt = $conn->prepare($query);
+                $stmt->execute();
+
+                // عرض الأحداث
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    echo '
+                    <div class="offering-box">
+                        <img src="uploads/' . htmlspecialchars($row['eventImage']) . '" alt="' . htmlspecialchars($row['eventName']) . '">
+                        <h3>' . htmlspecialchars($row['eventName']) . '</h3>
+                        <p>التاريخ: ' . htmlspecialchars($row['eventDate']) . '</p>
+                        <a href="book_ticket.php" class="booking-btn">شراء التذاكر</a>
+                    </div>
+                    ';
+                }
+            } catch (PDOException $e) {
+                echo "<p>خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage() . "</p>";
+            }
+            ?>
         </div>
     </div>
 
