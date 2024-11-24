@@ -98,6 +98,7 @@
     <div class="event-offerings">
         <h2>عروض رحلات الطيران</h2>
         <div class="offering-container">
+            <!-- الأحداث الثابتة -->
             <div class="offering-box">
                 <img src="istanbul.jpg" alt="رحلة إلى إسطنبول">
                 <h3>إسطنبول</h3>
@@ -122,6 +123,39 @@
                 <p>التاريخ: 2023-09-01 - 2023-09-07</p>
                 <a href="book_ticket.php" class="booking-btn">احجز الآن</a>
             </div>
+
+            <!-- الأحداث من قاعدة البيانات -->
+            <?php
+            // الاتصال بقاعدة البيانات
+            $host = "localhost";
+            $dbname = "booking_system";
+            $username = "root";
+            $password = "";
+
+            try {
+                $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                // جلب الأحداث من نوع "عرض طيران"
+                $query = "SELECT * FROM events WHERE eventType = 'عرض طيران'";
+                $stmt = $conn->prepare($query);
+                $stmt->execute();
+
+                // عرض الأحداث
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    echo '
+                    <div class="offering-box">
+                        <img src="uploads/' . htmlspecialchars($row['eventImage']) . '" alt="' . htmlspecialchars($row['eventName']) . '">
+                        <h3>' . htmlspecialchars($row['eventName']) . '</h3>
+                        <p>التاريخ: ' . htmlspecialchars($row['eventDate']) . '</p>
+                        <a href="book_ticket.php" class="booking-btn">احجز الآن</a>
+                    </div>
+                    ';
+                }
+            } catch (PDOException $e) {
+                echo "<p>خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage() . "</p>";
+            }
+            ?>
         </div>
     </div>
 
