@@ -1,0 +1,13 @@
+{
+    "name": "hp/malf_edafe",
+    "description": "\"A web application for managing events and booking tickets, providing tools for event organizers and attendees to interact effectively.\"",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Hp\\MalfEdafe\\": "src/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "*"
+    }
+}

@@ -1,6 +1,5 @@
 <?php
 // الاتصال بقاعدة البيانات
-require 'Rating.php';
 $host = "localhost";
 $dbname = "booking_system";
 $username = "root";
@@ -9,7 +8,6 @@ $password = "";
 try {
     $conn = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $ratingInstance = new Rating($conn);
 } catch (PDOException $e) {
     die("فشل الاتصال بقاعدة البيانات: " . $e->getMessage());
 }
@@ -35,14 +33,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $review = $_POST['review'];
 
     try {
-        if ($ratingInstance->insertRating($userID, $eventID, $rating, $review)) {
-            echo "<script>alert('تم إرسال تقييمك بنجاح!'); window.location.href = 'ratings_page.php';</script>";
-        }
+        $insertQuery = "INSERT INTO ratings (userID, eventID, rating, review) VALUES (:userID, :eventID, :rating, :review)";
+        $insertStmt = $conn->prepare($insertQuery);
+        $insertStmt->bindParam(':userID', $userID);
+        $insertStmt->bindParam(':eventID', $eventID);
+        $insertStmt->bindParam(':rating', $rating);
+        $insertStmt->bindParam(':review', $review);
+        $insertStmt->execute();
+
+        echo "<script>alert('تم إرسال تقييمك بنجاح!'); window.location.href = 'ratings_page.php';</script>";
     } catch (PDOException $e) {
         echo "<script>alert('حدث خطأ أثناء إرسال التقييم.');</script>";
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -186,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="radio" id="star2-<?php echo $event['eventID']; ?>" name="rating" value="2">
                         <label for="star2-<?php echo $event['eventID']; ?>">&#9733;</label>
 
-                        <input type of="radio" id="star1-<?php echo $event['eventID']; ?>" name="rating" value="1">
+                        <input type="radio" id="star1-<?php echo $event['eventID']; ?>" name="rating" value="1">
                         <label for="star1-<?php echo $event['eventID']; ?>">&#9733;</label>
                     </div>
                 </div>

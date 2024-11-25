@@ -1,0 +1,49 @@
+<?php
+
+use PHPUnit\Framework\TestCase;
+
+require_once 'path/to/PaymentMethods.php'; // تأكد من تحديد المسار الصحيح
+
+class PaymentMethodsTest extends TestCase {
+    private $paymentMethods;
+    private $pdo;
+
+    protected function setUp(): void {
+        $this->pdo = $this->createMock(PDO::class);
+        $this->paymentMethods = new PaymentMethods($this->pdo);
+    }
+
+    public function testAddPaymentMethodSuccess() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->once())->method('execute')->willReturn(true);
+        $this->pdo->expects($this->once())->method('prepare')->willReturn($stmt);
+
+        $result = $this->paymentMethods->addPaymentMethod('1234567890123456', 'BankCard', 1);
+        $this->assertSame("تمت إضافة طريقة الدفع بنجاح.", $result);
+    }
+
+    public function testAddPaymentMethodFailure() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->once())
+             ->method('execute')
+             ->will($this->throwException(new PDOException("خطأ في البيانات")));
+        $this->pdo->expects($this->once())
+             ->method('prepare')
+             ->willReturn($stmt);
+
+        $result = $this->paymentMethods->addPaymentMethod('12345', 'BankCard', 1);
+        $this->assertStringContainsString("خطأ أثناء إضافة طريقة الدفع:", $result);
+    }
+
+    public function testGetPaymentMethods() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetchAll')->willReturn([
+            ['cardNumber' => '1234567890123456', 'paymentMethodName' => 'BankCard', 'userName' => 'John Doe']
+        ]);
+        $this->pdo->expects($this->once())->method('query')->willReturn($stmt);
+
+        $results = $this->paymentMethods->getPaymentMethods();
+        $this->assertCount(1, $results);
+        $this->assertEquals('John Doe', $results[0]['userName']);
+    }
+}
