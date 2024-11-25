@@ -101,6 +101,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <nav>
     <a href="home.php">الصفحة الرئيسية</a>
     <a href="login.php">تسجيل دخول</a>
+    
+
+
+    <a href="ratings_page.php">تقييم الأحداث</a>
+    <a href="addEvent.php">إضافة حدث </a>
+
 
 </nav>
 

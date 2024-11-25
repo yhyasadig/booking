@@ -162,6 +162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="login.php">تسجيل دخول</a>
     <a href="Event_Page.php">الأحداث</a>
     <a href="ratings_page.php">التقييمات</a>
+    
+    <a href="addEvent.php">إضافة حدث </a>
+
 </nav>
 
 <div class="event-container">

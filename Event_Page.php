@@ -87,6 +87,13 @@
     <nav>
         <a href="register.php">تسجيل مستخدم جديد</a>
         <a href="login.php">تسجيل دخول</a>
+        
+
+
+    <a href="ratings_page.php">تقييم الأحداث</a>
+    <a href="addEvent.php">إضافة حدث </a>
+
+
     
     </nav>
 

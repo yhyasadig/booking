@@ -160,7 +160,16 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
 
 <nav>
     <a href="home.php">الصفحة الرئيسية</a>
-    <a href="addEvent.php">إضافة حدث</a>
+   
+
+    
+
+
+    <a href="ratings_page.php">تقييم الأحداث</a>
+   
+
+
+    
 </nav>
 
 <div class="container">

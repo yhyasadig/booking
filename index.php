@@ -197,6 +197,12 @@ $methods = $paymentMethods->getPaymentMethods();
     <a href="home.php">الصفحة الرئيسية</a>
     <a href="register.php">تسجيل مستخدم جديد</a>
     <a href="paymentMethods.php">طرق الدفع</a>
+    
+
+
+    <a href="ratings_page.php">تقييم الأحداث</a>
+    <a href="addEvent.php">إضافة حدث </a>
+
 </nav>
 
 <div class="container">

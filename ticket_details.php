@@ -7,7 +7,6 @@ $ticketprice = $_GET['ticketprice'];
 $seatType = $_GET['seatType'];
 $event = $_GET['event']; // استقبل الحدث
 $totalPrice = $ticketprice * $ticketcount;
-
 ?>
 
 <!DOCTYPE html>
@@ -23,6 +22,29 @@ $totalPrice = $ticketprice * $ticketcount;
             margin: 0;
             padding: 20px;
         }
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+        }
+        nav {
+            background-color: #0056b3;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav a {
+            margin: 0 15px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        nav a:hover {
+            background-color: #004494;
+        }
         h1 {
             color: #007bff;
         }
@@ -33,9 +55,37 @@ $totalPrice = $ticketprice * $ticketcount;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
             margin-bottom: 20px;
         }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
+
+<header>
+    <h1>نظام الحجز</h1>
+</header>
+
+<nav>
+    <a href="index.php">الصفحة الرئيسية</a>
+    <a href="register.php">تسجيل مستخدم جديد</a>
+    <a href="login.php">تسجيل دخول</a>
+    
+
+
+    <a href="ratings_page.php">تقييم الأحداث</a>
+    <a href="addEvent.php">إضافة حدث </a>
+
+</nav>
 
 <h1>تفاصيل التذكرة</h1>
 
@@ -54,6 +104,10 @@ $totalPrice = $ticketprice * $ticketcount;
     <p><strong>اسم الحدث:</strong> <?php echo htmlspecialchars($event); ?></p> <!-- عرض اسم الحدث -->
     <p><strong>إجمالي السعر:</strong> <?php echo htmlspecialchars($totalPrice); ?> دينار</p>
 </div>
+
+<form action="index.php" method="get" style="text-align: center;">
+    <button type="submit">متابعة إلى الدفع</button>
+</form>
 
 </body>
 </html>
