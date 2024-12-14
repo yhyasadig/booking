@@ -35,15 +35,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($discount) {
                 $discountAmount = $discount['DiscountAmount'];
                 $description = $discount['Description'];
-                echo "<script>alert('تم تسجيل الدخول بنجاح. لديك خصم $discountAmount%. السبب: $description.'); window.location.href='home.php';</script>";
+                $_SESSION['notification'] = "تم تسجيل الدخول بنجاح. لديك خصم $discountAmount%. السبب: $description.";
             } else {
-                echo "<script>alert('تم تسجيل الدخول بنجاح. لا يوجد خصم لهذه المهنة.'); window.location.href='home.php';</script>";
+                $_SESSION['notification'] = "تم تسجيل الدخول بنجاح. لا يوجد خصم لهذه المهنة.";
             }
         } else {
-            echo "<script>alert('تم تسجيل الدخول بنجاح. لا يمكن تحديد مهنتك.'); window.location.href='home.php';</script>";
+            $_SESSION['notification'] = "تم تسجيل الدخول بنجاح. لا يمكن تحديد مهنتك.";
         }
+
+        // جلب الإشعارات الخاصة بالمستخدم
+        $query = "SELECT title, message, created_at FROM notifications WHERE user_id = :userid";
+        $stmt = $conn->prepare($query);
+        $stmt->bindParam(':userid', $user->userid);
+        $stmt->execute();
+        $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // تخزين الإشعارات في الجلسة
+        $_SESSION['notifications'] = $notifications;
+
+        // إعادة التوجيه إلى الصفحة الرئيسية
+        header('Location: home.php');
+        exit;
     } else {
-        echo "<script>alert('فشل تسجيل الدخول. يرجى التحقق من البيانات.');</script>";
+        $error = "فشل تسجيل الدخول. يرجى التحقق من البيانات.";
     }
 }
 ?>
@@ -60,24 +74,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             background-color: #f8f9fa;
             margin: 0;
             padding: 0;
-            direction: rtl;
-            text-align: center;
         }
-
         header {
             background-color: #007bff;
             color: white;
             padding: 15px 0;
             text-align: center;
-            font-size: 24px;
         }
-
         nav {
             background-color: #0056b3;
             padding: 10px 0;
             text-align: center;
         }
-
         nav a {
             margin: 0 15px;
             text-decoration: none;
@@ -87,11 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 5px;
             transition: background-color 0.3s;
         }
-
         nav a:hover {
             background-color: #004494;
         }
-
         .container {
             max-width: 400px;
             margin: 50px auto;
@@ -101,13 +107,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             text-align: left;
         }
-
         h2 {
             color: #007bff;
             margin-bottom: 20px;
             text-align: center;
         }
-
         input {
             width: 100%;
             padding: 10px;
@@ -116,7 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 5px;
             box-sizing: border-box;
         }
-
         button {
             background-color: #007bff;
             color: white;
@@ -128,11 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-size: 16px;
             font-weight: bold;
         }
-
         button:hover {
             background-color: #0056b3;
         }
-
         footer {
             text-align: center;
             margin-top: 20px;
@@ -140,10 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             background-color: #f1f1f1;
             font-size: 0.9em;
             color: #666;
-        }
-
-        footer p {
-            margin: 0;
         }
     </style>
 </head>
@@ -156,11 +153,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <nav>
     <a href="home.php">الصفحة الرئيسية</a>
     <a href="register.php">تسجيل مستخدم جديد</a>
+    <a href="Event_Page.php">الأحداث </a>
+    <a href="add_discounts.php">اضافة خصم</a>
+    <a href="ratings_page.php">تقييم الأحداث</a>
+    <a href="addEvent.php">إضافة حدث </a>
 </nav>
 
 <div class="container">
     <form action="login.php" method="POST">
         <h2>تسجيل دخول</h2>
+        <?php if (isset($error)): ?>
+            <p style="color: red;"><?= htmlspecialchars($error); ?></p>
+        <?php endif; ?>
         <label for="email">البريد الإلكتروني:</label>
         <input type="email" id="email" name="email" placeholder="البريد الإلكتروني" required>
         
