@@ -15,7 +15,7 @@ class Discount {
     // إضافة خصم جديد
     public function addDiscount() {
         try {
-            $query = "INSERT INTO " . $this->table_name . " (Profession, DiscountAmount, Description)
+            $query = "INSERT INTO {$this->table_name} (Profession, DiscountAmount, Description)
                       VALUES (:profession, :discountAmount, :description)";
             $stmt = $this->conn->prepare($query);
 
@@ -24,10 +24,7 @@ class Discount {
             $stmt->bindParam(':discountAmount', $this->discountAmount);
             $stmt->bindParam(':description', $this->description);
 
-            if ($stmt->execute()) {
-                return true;
-            }
-            return false;
+            return $stmt->execute();
         } catch (PDOException $e) {
             throw new Exception("خطأ أثناء إضافة الخصم: " . $e->getMessage());
         }
@@ -36,10 +33,10 @@ class Discount {
     // جلب جميع الخصومات
     public function getAllDiscounts() {
         try {
-            $query = "SELECT * FROM " . $this->table_name;
+            $query = "SELECT * FROM {$this->table_name}";
             $stmt = $this->conn->prepare($query);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $stmt->fetchAll();
         } catch (PDOException $e) {
             throw new Exception("خطأ أثناء جلب الخصومات: " . $e->getMessage());
         }

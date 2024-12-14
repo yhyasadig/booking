@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "فشل في إضافة الخصم.";
         }
     } catch (Exception $e) {
-        $message = $e->getMessage();
+        $message = "⚠️ " . $e->getMessage();
     }
 }
 ?>

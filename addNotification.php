@@ -1,40 +1,27 @@
 <?php
-require 'Notification.php';
+require 'Database.php'; // استدعاء كلاس الاتصال بقاعدة البيانات
+require 'Notification.php'; // استدعاء كلاس إدارة الإشعارات
 
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "booking_system2"; // اسم قاعدة البيانات الصحيح
+$message = ""; // رسالة تأكيد أو خطأ
 
-// إنشاء اتصال بقاعدة البيانات
-try {
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    if ($conn->connect_error) {
-        throw new Exception("فشل الاتصال بقاعدة البيانات: " . $conn->connect_error);
-    }
-} catch (Exception $e) {
-    die("خطأ: " . $e->getMessage());
-}
-
-// إضافة إشعار جديد إذا تم إرسال النموذج
-$message = "";
+// إذا تم إرسال النموذج
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $title = $_POST['title'] ?? null;
-        $messageContent = $_POST['message'] ?? null;
-        $isGlobal = isset($_POST['is_global']) ? 1 : 0; // تحديد إذا كان الإشعار عامًا
+        $title = $_POST['title'] ?? null; // العنوان المدخل
+        $messageContent = $_POST['message'] ?? null; // الرسالة المدخلة
+        $isGlobal = isset($_POST['is_global']) ? 1 : 0; // التحقق إذا كان الإشعار عامًا
 
+        // التحقق من صحة المدخلات
         if (!$title || !$messageContent) {
             throw new Exception("العنوان والرسالة مطلوبان.");
         }
 
-        // إدخال الإشعار في قاعدة البيانات
-        $stmt = $conn->prepare("INSERT INTO notifications (title, message, is_global, created_at) VALUES (?, ?, ?, NOW())");
-        $stmt->bind_param("ssi", $title, $messageContent, $isGlobal);
-        $stmt->execute();
-        $stmt->close();
-
-        $message = "تمت إضافة الإشعار بنجاح.";
+        // إنشاء كائن الإشعار وحفظه
+        $database = new Database();
+        $conn = $database->getConnection(); // الاتصال بقاعدة البيانات
+        $notification = new Notification($title, $messageContent, $isGlobal);
+        $message = $notification->save($conn);
+        $database->closeConnection(); // إغلاق الاتصال بعد الحفظ
     } catch (Exception $e) {
         $message = "خطأ: " . $e->getMessage();
     }
@@ -43,11 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // استرجاع جميع الإشعارات العامة
 $allNotifications = [];
 try {
-    $stmt = $conn->prepare("SELECT title, message, created_at FROM notifications WHERE is_global = 1 ORDER BY created_at DESC");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $allNotifications = $result->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
+    $database = new Database();
+    $conn = $database->getConnection(); // الاتصال بقاعدة البيانات
+    $allNotifications = Notification::fetchAll($conn, 1); // استرجاع الإشعارات العامة فقط
+    $database->closeConnection(); // إغلاق الاتصال بعد الجلب
 } catch (Exception $e) {
     $message = "خطأ أثناء جلب الإشعارات: " . $e->getMessage();
 }
