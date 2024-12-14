@@ -13,31 +13,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $user->password = $_POST['password'];
     $user->profession = $_POST['profession']; // تخزين المهنة
 
-    // البحث عن DiscountID بناءً على المهنة
-    $stmt = $conn->prepare("SELECT DiscountID FROM Discounts WHERE Profession = :profession");
-    $stmt->bindParam(":profession", $user->profession);
-    $stmt->execute();
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($result) {
-        $user->discountID = $result['DiscountID'];
-    } else {
-        $user->discountID = null; // لا يوجد خصم
-    }
-
-    // تسجيل المستخدم في قاعدة البيانات
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, profession, DiscountID) VALUES (:username, :email, :password, :profession, :discountID)");
-    $hashed_password = password_hash($user->password, PASSWORD_BCRYPT);
-    $stmt->bindParam(':username', $user->username);
+    // التحقق من وجود البريد الإلكتروني مسبقًا
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE email = :email");
     $stmt->bindParam(':email', $user->email);
-    $stmt->bindParam(':password', $hashed_password);
-    $stmt->bindParam(':profession', $user->profession);
-    $stmt->bindParam(':discountID', $user->discountID);
+    $stmt->execute();
+    $emailExists = $stmt->fetchColumn();
 
-    if ($stmt->execute()) {
-        $_SESSION['userid'] = $conn->lastInsertId(); // الحصول على معرف المستخدم الجديد
-        echo "<script>alert('تم تسجيل المستخدم بنجاح.'); window.location.href='home.php';</script>";
+    if ($emailExists) {
+        // إذا كان البريد الإلكتروني موجودًا بالفعل
+        echo "<script>alert('البريد الإلكتروني مسجل مسبقًا. يرجى استخدام بريد إلكتروني آخر.');</script>";
     } else {
-        echo "<script>alert('فشل التسجيل.');</script>";
+        // البحث عن DiscountID بناءً على المهنة
+        $stmt = $conn->prepare("SELECT DiscountID FROM Discounts WHERE Profession = :profession");
+        $stmt->bindParam(":profession", $user->profession);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($result) {
+            $user->discountID = $result['DiscountID'];
+        } else {
+            $user->discountID = null; // لا يوجد خصم
+        }
+
+        // تسجيل المستخدم في قاعدة البيانات
+        $stmt = $conn->prepare("INSERT INTO users (username, email, password, profession, DiscountID) VALUES (:username, :email, :password, :profession, :discountID)");
+        $hashed_password = password_hash($user->password, PASSWORD_BCRYPT);
+        $stmt->bindParam(':username', $user->username);
+        $stmt->bindParam(':email', $user->email);
+        $stmt->bindParam(':password', $hashed_password);
+        $stmt->bindParam(':profession', $user->profession);
+        $stmt->bindParam(':discountID', $user->discountID);
+
+        if ($stmt->execute()) {
+            $_SESSION['userid'] = $conn->lastInsertId(); // الحصول على معرف المستخدم الجديد
+            echo "<script>alert('تم تسجيل المستخدم بنجاح.'); window.location.href='home.php';</script>";
+        } else {
+            echo "<script>alert('فشل التسجيل. حاول مرة أخرى.');</script>";
+        }
     }
 }
 ?>
