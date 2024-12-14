@@ -1,7 +1,7 @@
 <?php
 // الاتصال بقاعدة البيانات
 $host = "localhost";
-$dbname = "booking_system";
+$dbname = "booking_system2";
 $username = "root";
 $password = "";
 

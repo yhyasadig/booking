@@ -1,12 +1,72 @@
 <?php
-$username = $_GET['username'];
-$phone = $_GET['phone'];
-$ticketcount = $_GET['ticketcount'];
-$names = explode(',', $_GET['names']);
-$ticketprice = $_GET['ticketprice'];
-$seatType = $_GET['seatType'];
-$event = $_GET['event']; // استقبل الحدث
-$totalPrice = $ticketprice * $ticketcount;
+session_start();
+
+// تحقق من تسجيل الدخول
+if (!isset($_SESSION['userid'])) {
+    echo "<script>alert('يرجى تسجيل الدخول أولاً.'); window.location.href='login.php';</script>";
+    exit;
+}
+
+// الحصول على معرف المستخدم ومعرف الحجز
+$userid = $_SESSION['userid'];
+$bookingId = isset($_GET['bookingId']) ? intval($_GET['bookingId']) : null;
+
+// التحقق من أن معرف الحجز موجود وصحيح
+if (!$bookingId || $bookingId <= 0) {
+    echo "<script>alert('رقم معرف الحجز غير موجود أو غير صالح.'); window.location.href='book_ticket.php';</script>";
+    exit;
+}
+
+try {
+    // الاتصال بقاعدة البيانات
+    $db = new PDO("mysql:host=localhost;dbname=booking_system2", "root", "");
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // جلب بيانات الحجز من جدول bookings
+    $stmt = $db->prepare("
+        SELECT 
+            b.bookingID, 
+            b.eventName, 
+            b.phone, 
+            b.seatType, 
+            b.ticketPrice, 
+            b.ticketCount, 
+            b.created_at, 
+            u.username, 
+            u.email 
+        FROM bookings b
+        INNER JOIN users u ON b.userid = u.userid
+        WHERE b.bookingID = :bookingId AND b.userid = :userid
+    ");
+    $stmt->bindParam(':bookingId', $bookingId, PDO::PARAM_INT);
+    $stmt->bindParam(':userid', $userid, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // تحقق من وجود بيانات الحجز
+    if (!$booking) {
+        echo "<script>alert('لا توجد بيانات للحجز المطلوب. تأكد من صحة رقم الحجز.'); window.location.href='book_ticket.php';</script>";
+        exit;
+    }
+
+    // استخراج البيانات
+    $eventName = $booking['eventName'];
+    $phone = $booking['phone'];
+    $seatType = $booking['seatType'];
+    $ticketPrice = $booking['ticketPrice'];
+    $ticketCount = $booking['ticketCount'];
+    $createdAt = $booking['created_at'];
+    $username = $booking['username'];
+    $email = $booking['email'];
+
+    // حساب السعر الإجمالي
+    $totalPrice = $ticketPrice * $ticketCount;
+
+} catch (PDOException $e) {
+    // عرض رسالة خطأ إذا كان هناك مشكلة في الاتصال بقاعدة البيانات
+    die("خطأ في الاتصال بقاعدة البيانات: " . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -45,9 +105,6 @@ $totalPrice = $ticketprice * $ticketcount;
         nav a:hover {
             background-color: #004494;
         }
-        h1 {
-            color: #007bff;
-        }
         .details {
             background: white;
             padding: 20px;
@@ -79,30 +136,20 @@ $totalPrice = $ticketprice * $ticketcount;
     <a href="index.php">الصفحة الرئيسية</a>
     <a href="register.php">تسجيل مستخدم جديد</a>
     <a href="login.php">تسجيل دخول</a>
-    
-
-
-    <a href="ratings_page.php">تقييم الأحداث</a>
-    <a href="addEvent.php">إضافة حدث </a>
-
 </nav>
 
 <h1>تفاصيل التذكرة</h1>
 
 <div class="details">
-    <p><strong>الاسم:</strong> <?php echo htmlspecialchars($username); ?></p>
+    <p><strong>اسم المستخدم:</strong> <?php echo htmlspecialchars($username); ?></p>
+    <p><strong>البريد الإلكتروني:</strong> <?php echo htmlspecialchars($email); ?></p>
+    <p><strong>اسم الحدث:</strong> <?php echo htmlspecialchars($eventName); ?></p>
     <p><strong>رقم الهاتف:</strong> <?php echo htmlspecialchars($phone); ?></p>
-    <p><strong>عدد التذاكر:</strong> <?php echo htmlspecialchars($ticketcount); ?></p>
-    <p><strong>أسماء المسافرين:</strong></p>
-    <ul>
-        <li><?php echo htmlspecialchars($username); ?></li> <!-- الاسم الأول هو الاسم المدخل -->
-        <?php for ($i = 2; $i <= $ticketcount; $i++): ?>
-            <li><?php echo htmlspecialchars($names[$i - 1]); ?></li>
-        <?php endfor; ?>
-    </ul>
     <p><strong>نوع المقعد:</strong> <?php echo htmlspecialchars($seatType); ?></p>
-    <p><strong>اسم الحدث:</strong> <?php echo htmlspecialchars($event); ?></p> <!-- عرض اسم الحدث -->
-    <p><strong>إجمالي السعر:</strong> <?php echo htmlspecialchars($totalPrice); ?> دينار</p>
+    <p><strong>عدد التذاكر:</strong> <?php echo htmlspecialchars($ticketCount); ?></p>
+    <p><strong>السعر لكل تذكرة:</strong> <?php echo htmlspecialchars($ticketPrice); ?> دينار</p>
+    <p><strong>السعر الإجمالي:</strong> <?php echo htmlspecialchars($totalPrice); ?> دينار</p>
+    <p><strong>تاريخ الحجز:</strong> <?php echo htmlspecialchars($createdAt); ?></p>
 </div>
 
 <form action="index.php" method="get" style="text-align: center;">

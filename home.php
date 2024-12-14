@@ -72,6 +72,8 @@ session_start();
     <a href="register.php">تسجيل مستخدم جديد</a>
     <a href="login.php">تسجيل دخول</a>
     <a href="Event_Page.php">الأحداث </a>
+    <a href="add_discounts.php">اضافة خصم</a>
+
 
 
 

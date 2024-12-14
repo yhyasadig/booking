@@ -1,83 +1,80 @@
 <?php
 session_start(); // بدء الجلسة
 
-// تحقق من أن المستخدم قد قام بتسجيل الدخول وأنه موجود في الجلسة
-if (!isset($_SESSION['userID'])) {
-    echo "<script>alert('يرجى تسجيل الدخول أولاً.'); window.location.href='login.php';</script>";
-    exit;
-}
-
-class PaymentMethods {
+class PaymentHandler {
     private $db;
 
     public function __construct() {
         try {
-            $this->db = new PDO("mysql:host=localhost;dbname=booking_system", "root", "");
+            $this->db = new PDO("mysql:host=localhost;dbname=booking_system2", "root", "");
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
             die("فشل الاتصال بقاعدة البيانات: " . $e->getMessage());
         }
     }
 
-    public function addPaymentMethod($cardNumber, $methodName, $userID) {
+    public function addPaymentAndBooking($cardNumber, $methodName, $userid, $booking) {
         try {
+            $this->db->beginTransaction();
+
+            // إدخال بيانات الدفع إلى جدول paymentmethods
             $stmt = $this->db->prepare(
-                "INSERT INTO PaymentMethods (cardNumber, paymentMethodName, userID) 
-                VALUES (:cardNumber, :methodName, :userID)"
+                "INSERT INTO paymentmethods (cardNumber, paymentMethodName, userid) 
+                VALUES (:cardNumber, :methodName, :userid)"
             );
             $stmt->bindParam(':cardNumber', $cardNumber);
             $stmt->bindParam(':methodName', $methodName);
-            $stmt->bindParam(':userID', $userID);
+            $stmt->bindParam(':userid', $userid);
             $stmt->execute();
-            return "تمت إضافة طريقة الدفع بنجاح.";
-        } catch (PDOException $e) {
-            return "خطأ أثناء إضافة طريقة الدفع: " . $e->getMessage();
-        }
-    }
 
-    public function getPaymentMethods() {
-        try {
-            $stmt = $this->db->query("SELECT pm.cardNumber, pm.paymentMethodName, u.userName 
-                                      FROM PaymentMethods pm 
-                                      JOIN Users u ON pm.userID = u.userID");
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // إدخال بيانات الحجز إلى جدول bookings
+            $stmt = $this->db->prepare(
+                "INSERT INTO bookings (userid, eventName, phone, seatType, ticketPrice, ticketCount, created_at) 
+                VALUES (:userid, :eventName, :phone, :seatType, :ticketPrice, :ticketCount, NOW())"
+            );
+            $stmt->bindParam(':userid', $userid);
+            $stmt->bindParam(':eventName', $booking['event']);
+            $stmt->bindParam(':phone', $booking['phone']);
+            $stmt->bindParam(':seatType', $booking['seatType']);
+            $stmt->bindParam(':ticketPrice', $booking['ticketprice']);
+            $stmt->bindParam(':ticketCount', $booking['ticketcount']);
+            $stmt->execute();
+
+            $this->db->commit();
+            return "تمت إضافة طريقة الدفع والحجز بنجاح.";
         } catch (PDOException $e) {
-            return [];
+            $this->db->rollBack();
+            return "خطأ أثناء معالجة الدفع والحجز: " . $e->getMessage();
         }
     }
 }
 
-$paymentMethods = new PaymentMethods();
+$paymentHandler = new PaymentHandler();
 
-// معالجة الإضافة إذا تم إرسال النموذج
 $message = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cardNumber = $_POST['cardNumber'];
     $methodName = $_POST['paymentMethodName'];
-    $userID = $_SESSION['userID']; // جلب userID من الجلسة
-    $message = $paymentMethods->addPaymentMethod($cardNumber, $methodName, $userID);
+    $userid = $_SESSION['userid']; // استدعاء userid من الجلسة
+    $booking = $_SESSION['booking']; // استدعاء بيانات الحجز من الجلسة
 
-    // إعادة توجيه إلى نفس الصفحة بعد معالجة النموذج
-    header('Location: ' . $_SERVER['PHP_SELF'] . '?success=1');
+    $message = $paymentHandler->addPaymentAndBooking($cardNumber, $methodName, $userid, $booking);
+
+    // مسح بيانات الحجز من الجلسة بعد الإضافة
+    unset($_SESSION['booking']);
+
+    // عرض رسالة النجاح باستخدام JavaScript
+    echo "<script>alert('تمت إضافة طريقة الدفع والحجز بنجاح.'); window.location.href='" . $_SERVER['PHP_SELF'] . "';</script>";
     exit;
 }
-
-// التحقق من وجود رسالة نجاح
-if (isset($_GET['success']) && $_GET['success'] == 1) {
-    $message = "تمت إضافة طريقة الدفع بنجاح.";
-}
-
-// جلب البيانات من قاعدة البيانات
-$methods = $paymentMethods->getPaymentMethods();
 ?>
 <!DOCTYPE html>
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طرق الدفع</title>
+    <title>طرق الدفع والحجز</title>
     <style>
-        /* تصميم الصفحة بالكامل */
         body {
             font-family: Arial, sans-serif;
             background-color: #e9ecef;
@@ -86,22 +83,17 @@ $methods = $paymentMethods->getPaymentMethods();
             direction: rtl;
             text-align: right;
         }
-
-        /* تصميم الهيدر */
         header {
             background-color: #007bff;
             color: white;
             padding: 15px 0;
             text-align: center;
         }
-
-        /* تصميم شريط التنقل */
         nav {
             background-color: #0056b3;
             padding: 10px 0;
             text-align: center;
         }
-
         nav a {
             margin: 0 15px;
             text-decoration: none;
@@ -111,14 +103,11 @@ $methods = $paymentMethods->getPaymentMethods();
             border-radius: 5px;
             transition: background-color 0.3s;
         }
-
         nav a:hover {
             background-color: #004494;
         }
-
-        /* تنسيق المربع الأبيض */
         .container {
-            max-width: 800px;
+            max-width: 600px;
             margin: 20px auto;
             background: white;
             padding: 20px;
@@ -126,22 +115,15 @@ $methods = $paymentMethods->getPaymentMethods();
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
             text-align: center;
         }
-
-        /* تنسيق الصورة */
-        .paymentTypeImage {
-            max-width: 90%;
-            height: auto;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        /* النصوص والعناوين */
         h2 {
             color: #007bff;
         }
-
-        /* الحقول والأزرار */
+        img {
+            width: 100%; /* اجعل الصورة بعرض الشاشة */
+            height: auto; /* احتفظ بنسبة العرض إلى الارتفاع */
+            border-radius: 8px; /* إضافة حواف دائرية */
+            margin-bottom: 15px;
+        }
         input, select, button {
             width: 100%;
             padding: 10px;
@@ -150,7 +132,6 @@ $methods = $paymentMethods->getPaymentMethods();
             border-radius: 5px;
             box-sizing: border-box;
         }
-
         button {
             background-color: #007bff;
             color: white;
@@ -158,27 +139,9 @@ $methods = $paymentMethods->getPaymentMethods();
             cursor: pointer;
             font-weight: bold;
         }
-
         button:hover {
             background-color: #0056b3;
         }
-
-        /* قائمة طرق الدفع */
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        li {
-            background: #fff;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        /* تصميم الفوتر */
         footer {
             text-align: center;
             margin-top: 20px;
@@ -190,29 +153,19 @@ $methods = $paymentMethods->getPaymentMethods();
 <body>
 
 <header>
-    <h1>شركة متين للحجوزات</h1>
+    <h1>طرق الدفع والحجز</h1>
 </header>
 
 <nav>
     <a href="home.php">الصفحة الرئيسية</a>
     <a href="register.php">تسجيل مستخدم جديد</a>
     <a href="paymentMethods.php">طرق الدفع</a>
-    
-
-
-    <a href="ratings_page.php">تقييم الأحداث</a>
-    <a href="addEvent.php">إضافة حدث </a>
-
 </nav>
 
 <div class="container">
     <h2>إضافة طريقة دفع</h2>
-
-    <!-- إضافة الصورة -->
-    <div class="paymentType">
-        <img src="ض.png" alt="paymentType" class="paymentTypeImage">
-    </div>
-
+    <!-- الصورة -->
+    <img src="ض.png" alt="صورة طريقة الدفع">
     <?php if (!empty($message)) echo "<p>$message</p>"; ?>
     <form method="post" action="">
         <label for="cardNumber">رقم البطاقة:</label>
@@ -228,17 +181,6 @@ $methods = $paymentMethods->getPaymentMethods();
 
         <button type="submit">إضافة</button>
     </form>
-
-    <h2>قائمة طرق الدفع</h2>
-    <ul>
-        <?php foreach ($methods as $method): ?>
-            <li>
-                <strong>رقم البطاقة:</strong> <?php echo $method['cardNumber']; ?> -
-                <strong>طريقة الدفع:</strong> <?php echo $method['paymentMethodName']; ?> -
-                <strong>اسم المستخدم:</strong> <?php echo $method['userName']; ?>
-            </li>
-        <?php endforeach; ?>
-    </ul>
 </div>
 
 <footer>

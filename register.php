@@ -2,7 +2,7 @@
 include_once 'Database.php';
 include_once 'User.php';
 
-session_start(); // بدء الجلسة
+session_start();
 $db = new Database();
 $conn = $db->getConnection();
 
@@ -11,8 +11,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $user->username = $_POST['username'];
     $user->email = $_POST['email'];
     $user->password = $_POST['password'];
+    $user->profession = $_POST['profession']; // تخزين المهنة
 
-    if ($user->register()) {
+    // البحث عن DiscountID بناءً على المهنة
+    $stmt = $conn->prepare("SELECT DiscountID FROM Discounts WHERE Profession = :profession");
+    $stmt->bindParam(":profession", $user->profession);
+    $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($result) {
+        $user->discountID = $result['DiscountID'];
+    } else {
+        $user->discountID = null; // لا يوجد خصم
+    }
+
+    // تسجيل المستخدم في قاعدة البيانات
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, profession, DiscountID) VALUES (:username, :email, :password, :profession, :discountID)");
+    $hashed_password = password_hash($user->password, PASSWORD_BCRYPT);
+    $stmt->bindParam(':username', $user->username);
+    $stmt->bindParam(':email', $user->email);
+    $stmt->bindParam(':password', $hashed_password);
+    $stmt->bindParam(':profession', $user->profession);
+    $stmt->bindParam(':discountID', $user->discountID);
+
+    if ($stmt->execute()) {
+        $_SESSION['userid'] = $conn->lastInsertId(); // الحصول على معرف المستخدم الجديد
         echo "<script>alert('تم تسجيل المستخدم بنجاح.'); window.location.href='home.php';</script>";
     } else {
         echo "<script>alert('فشل التسجيل.');</script>";
@@ -57,29 +79,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             background-color: #004494;
         }
         .container {
-            max-width: 400px;
-            margin: 20px auto;
+            max-width: 600px;
+            margin: 40px auto;
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
         }
-        h2 {
-            color: #007bff;
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
-        input {
-            width: 100%;
+        input, select, button {
             padding: 10px;
-            margin: 10px 0;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
         }
         button {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px;
-            border-radius: 5px;
             cursor: pointer;
-            width: 100%;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #0056b3;
@@ -101,13 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <nav>
     <a href="home.php">الصفحة الرئيسية</a>
     <a href="login.php">تسجيل دخول</a>
-    
-
-
+    <a href="register.php">تسجيل مستخدم جديد</a>
     <a href="ratings_page.php">تقييم الأحداث</a>
-    <a href="addEvent.php">إضافة حدث </a>
-
-
+    <a href="addEvent.php">إضافة حدث</a>
 </nav>
 
 <div class="container">
@@ -116,6 +135,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <input type="text" name="username" placeholder="اسم المستخدم" required>
         <input type="email" name="email" placeholder="البريد الإلكتروني" required>
         <input type="password" name="password" placeholder="كلمة المرور" required>
+        <select name="profession" required>
+            <option value="">اختر مهنة...</option>
+            <option value="طالب">طالب</option>
+            <option value="عسكري">عسكري</option>
+            <option value="موظف">موظف</option>
+            <option value="لا يعمل">لا يعمل</option>
+        </select>
         <button type="submit">تسجيل</button>
     </form>
 </div>

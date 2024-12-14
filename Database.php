@@ -1,7 +1,7 @@
 <?php
 class Database {
     private $host = 'localhost';
-    private $db_name = 'booking_system';
+    private $db_name = 'booking_system2';
     private $username = 'root'; // استخدم اسم المستخدم المناسب
     private $password = ''; // استخدم كلمة المرور المناسبة
     public $conn;
