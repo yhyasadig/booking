@@ -3,12 +3,42 @@ require_once 'Database.php';
 
 session_start();
 
+
+
+///////
+
+
+
 // تحقق من أن المستخدم قد قام بتسجيل الدخول
 if (!isset($_SESSION['userID'])) {
     echo "<script>alert('يرجى تسجيل الدخول أولاً.'); window.location.href='login.php';</script>";
     exit;
 }
 
+// التحقق من أن المستخدم لديه دور admin
+try {
+    $db = new PDO("mysql:host=localhost;dbname=booking_system2", "root", "");
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // جلب دور المستخدم من قاعدة البيانات
+    $stmt = $db->prepare("SELECT role FROM users WHERE userid = :userid");
+    $stmt->bindParam(':userid', $_SESSION['userID']);
+    $stmt->execute();
+
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // إذا كان المستخدم ليس admin
+    if (!$user || $user['role'] != 'admin') {
+        echo "<script>alert('غير مصرح لك بالوصول إلى هذه الصفحة.'); window.location.href='home.php';</script>";
+        exit;
+    }
+} catch (PDOException $e) {
+    die("فشل الاتصال بقاعدة البيانات: " . $e->getMessage());
+}
+
+
+
+/////
 class Events {
     private $db;
 
@@ -62,6 +92,8 @@ class Events {
         } catch (PDOException $e) {
             // إرجاع المعاملة إذا حدث خطأ
             $this->db->rollBack();
+            // طباعة تفاصيل الخطأ للمساعدة في تحديد المشكلة
+            echo "خطأ: " . $e->getMessage();
             return false;
         }
     }

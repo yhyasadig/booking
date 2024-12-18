@@ -1,27 +1,58 @@
 <?php
-require 'Database.php'; // استدعاء كلاس الاتصال بقاعدة البيانات
-require 'Notification.php'; // استدعاء كلاس إدارة الإشعارات
+session_start();
+
+// التحقق من تسجيل الدخول
+if (!isset($_SESSION['userID'])) {
+    echo "<script>alert('يرجى تسجيل الدخول أولاً.'); window.location.href='login.php';</script>";
+    exit;
+}
+
+// الاتصال بقاعدة البيانات
+require 'Database.php';
+
+try {
+    // إنشاء اتصال بقاعدة البيانات
+    $db = new PDO("mysql:host=localhost;dbname=booking_system2", "root", "");
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // جلب دور المستخدم من قاعدة البيانات
+    $stmt = $db->prepare("SELECT role FROM users WHERE userid = :userid");
+    $stmt->bindParam(':userid', $_SESSION['userID']);
+    $stmt->execute();
+
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // إذا كان المستخدم ليس admin
+    if (!$user || $user['role'] != 'admin') {
+        echo "<script>alert('غير مصرح لك بالوصول إلى هذه الصفحة.'); window.location.href='home.php';</script>";
+        exit;
+    }
+} catch (PDOException $e) {
+    die("فشل الاتصال بقاعدة البيانات: " . $e->getMessage());
+}
+
+// جلب بيانات الإشعارات وإدارتها
+require 'Notification.php';
 
 $message = ""; // رسالة تأكيد أو خطأ
 
 // إذا تم إرسال النموذج
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $title = $_POST['title'] ?? null; // العنوان المدخل
-        $messageContent = $_POST['message'] ?? null; // الرسالة المدخلة
-        $isGlobal = isset($_POST['is_global']) ? 1 : 0; // التحقق إذا كان الإشعار عامًا
+        $title = $_POST['title'] ?? null;
+        $messageContent = $_POST['message'] ?? null;
+        $isGlobal = isset($_POST['is_global']) ? 1 : 0;
 
-        // التحقق من صحة المدخلات
         if (!$title || !$messageContent) {
             throw new Exception("العنوان والرسالة مطلوبان.");
         }
 
-        // إنشاء كائن الإشعار وحفظه
         $database = new Database();
-        $conn = $database->getConnection(); // الاتصال بقاعدة البيانات
+        $conn = $database->getConnection();
+
         $notification = new Notification($title, $messageContent, $isGlobal);
         $message = $notification->save($conn);
-        $database->closeConnection(); // إغلاق الاتصال بعد الحفظ
+        $database->closeConnection();
     } catch (Exception $e) {
         $message = "خطأ: " . $e->getMessage();
     }
@@ -31,9 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $allNotifications = [];
 try {
     $database = new Database();
-    $conn = $database->getConnection(); // الاتصال بقاعدة البيانات
-    $allNotifications = Notification::fetchAll($conn, 1); // استرجاع الإشعارات العامة فقط
-    $database->closeConnection(); // إغلاق الاتصال بعد الجلب
+    $conn = $database->getConnection();
+    $allNotifications = Notification::fetchAll($conn, 1);
+    $database->closeConnection();
 } catch (Exception $e) {
     $message = "خطأ أثناء جلب الإشعارات: " . $e->getMessage();
 }
@@ -82,30 +113,6 @@ try {
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        .notification {
-            border-bottom: 1px solid #ddd;
-            padding: 15px 0;
-        }
-        .notification:last-child {
-            border-bottom: none;
-        }
-        .notification h3 {
-            margin: 0;
-            font-size: 18px;
-            color: #333;
-        }
-        .notification p {
-            margin: 5px 0;
-            color: #555;
-        }
-        .notification span {
-            display: block;
-            color: #999;
-            font-size: 12px;
-        }
-        form {
-            margin-bottom: 20px;
         }
         form input, form textarea, form button {
             display: block;
@@ -157,19 +164,6 @@ try {
         </label>
         <button type="submit">إضافة</button>
     </form>
-
-    <h2>الإشعارات السابقة</h2>
-    <?php if (is_array($allNotifications) && count($allNotifications) > 0): ?>
-        <?php foreach ($allNotifications as $notification): ?>
-            <div class="notification">
-                <h3><?= htmlspecialchars($notification['title']) ?></h3>
-                <p><?= htmlspecialchars($notification['message']) ?></p>
-                <span><?= $notification['created_at'] ?></span>
-            </div>
-        <?php endforeach; ?>
-    <?php else: ?>
-        <p>لا توجد إشعارات لعرضها.</p>
-    <?php endif; ?>
 </div>
 
 <footer>

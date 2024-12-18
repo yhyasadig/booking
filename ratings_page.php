@@ -12,40 +12,27 @@ try {
     die("فشل الاتصال بقاعدة البيانات: " . $e->getMessage());
 }
 
-// جلب جميع الأحداث من جدول events
-$query = "SELECT * FROM events";
+// التحقق من أن المستخدم قام بتسجيل الدخول
+session_start();
+if (!isset($_SESSION['userID'])) {
+    echo "<script>alert('يرجى تسجيل الدخول لتقييم الأحداث.'); window.location.href = 'login.php';</script>";
+    exit;
+}
+
+$userID = $_SESSION['userID']; // معرّف المستخدم من الجلسة
+
+// جلب الأحداث التي تم حجزها بواسطة المستخدم الحالي
+$query = "
+    SELECT e.eventID, e.eventName, e.eventDate, e.eventImage
+    FROM events e
+    INNER JOIN bookings b ON e.eventName = b.eventName
+    WHERE b.userID = :userID
+";
 $stmt = $conn->prepare($query);
+$stmt->bindParam(':userID', $userID, PDO::PARAM_INT);
 $stmt->execute();
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// معالجة إرسال التقييم
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // التحقق من أن المستخدم قام بتسجيل الدخول
-    session_start();
-    if (!isset($_SESSION['userID'])) {
-        echo "<script>alert('يرجى تسجيل الدخول لتقييم الأحداث.'); window.location.href = 'login.php';</script>";
-        exit;
-    }
-
-    $userID = $_SESSION['userID']; // معرّف المستخدم من الجلسة
-    $eventID = $_POST['eventID'];
-    $rating = $_POST['rating'];
-    $review = $_POST['review'];
-
-    try {
-        $insertQuery = "INSERT INTO ratings (userID, eventID, rating, review) VALUES (:userID, :eventID, :rating, :review)";
-        $insertStmt = $conn->prepare($insertQuery);
-        $insertStmt->bindParam(':userID', $userID);
-        $insertStmt->bindParam(':eventID', $eventID);
-        $insertStmt->bindParam(':rating', $rating);
-        $insertStmt->bindParam(':review', $review);
-        $insertStmt->execute();
-
-        echo "<script>alert('تم إرسال تقييمك بنجاح!'); window.location.href = 'ratings_page.php';</script>";
-    } catch (PDOException $e) {
-        echo "<script>alert('حدث خطأ أثناء إرسال التقييم.');</script>";
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -162,45 +149,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="login.php">تسجيل دخول</a>
     <a href="Event_Page.php">الأحداث</a>
     <a href="ratings_page.php">التقييمات</a>
-    
-    <a href="addEvent.php">إضافة حدث </a>
-
+    <a href="addEvent.php">إضافة حدث</a>
 </nav>
 
 <div class="event-container">
-    <?php foreach ($events as $event): ?>
-        <div class="event-box">
-            <img src="uploads/<?php echo htmlspecialchars($event['eventImage']); ?>" alt="<?php echo htmlspecialchars($event['eventName']); ?>">
-            <h3><?php echo htmlspecialchars($event['eventName']); ?></h3>
-            <p><?php echo htmlspecialchars($event['eventDate']); ?></p>
+    <?php if (empty($events)): ?>
+        <p>لا توجد أحداث محجوزة لتقييمها.</p>
+    <?php else: ?>
+        <?php foreach ($events as $event): ?>
+            <div class="event-box">
+                <img src="uploads/<?php echo htmlspecialchars($event['eventImage']); ?>" alt="<?php echo htmlspecialchars($event['eventName']); ?>">
+                <h3><?php echo htmlspecialchars($event['eventName']); ?></h3>
+                <p><?php echo htmlspecialchars($event['eventDate']); ?></p>
 
-            <form method="POST">
-                <input type="hidden" name="eventID" value="<?php echo $event['eventID']; ?>">
+                <form method="POST">
+                    <input type="hidden" name="eventID" value="<?php echo $event['eventID']; ?>">
 
-                <div class="rating-container">
-                    <div class="star-rating">
-                        <input type="radio" id="star5-<?php echo $event['eventID']; ?>" name="rating" value="5" required>
-                        <label for="star5-<?php echo $event['eventID']; ?>">&#9733;</label>
+                    <div class="rating-container">
+                        <div class="star-rating">
+                            <input type="radio" id="star5-<?php echo $event['eventID']; ?>" name="rating" value="5" required>
+                            <label for="star5-<?php echo $event['eventID']; ?>">&#9733;</label>
 
-                        <input type="radio" id="star4-<?php echo $event['eventID']; ?>" name="rating" value="4">
-                        <label for="star4-<?php echo $event['eventID']; ?>">&#9733;</label>
+                            <input type="radio" id="star4-<?php echo $event['eventID']; ?>" name="rating" value="4">
+                            <label for="star4-<?php echo $event['eventID']; ?>">&#9733;</label>
 
-                        <input type="radio" id="star3-<?php echo $event['eventID']; ?>" name="rating" value="3">
-                        <label for="star3-<?php echo $event['eventID']; ?>">&#9733;</label>
+                            <input type="radio" id="star3-<?php echo $event['eventID']; ?>" name="rating" value="3">
+                            <label for="star3-<?php echo $event['eventID']; ?>">&#9733;</label>
 
-                        <input type="radio" id="star2-<?php echo $event['eventID']; ?>" name="rating" value="2">
-                        <label for="star2-<?php echo $event['eventID']; ?>">&#9733;</label>
+                            <input type="radio" id="star2-<?php echo $event['eventID']; ?>" name="rating" value="2">
+                            <label for="star2-<?php echo $event['eventID']; ?>">&#9733;</label>
 
-                        <input type="radio" id="star1-<?php echo $event['eventID']; ?>" name="rating" value="1">
-                        <label for="star1-<?php echo $event['eventID']; ?>">&#9733;</label>
+                            <input type="radio" id="star1-<?php echo $event['eventID']; ?>" name="rating" value="1">
+                            <label for="star1-<?php echo $event['eventID']; ?>">&#9733;</label>
+                        </div>
                     </div>
-                </div>
 
-                <textarea name="review" placeholder="أضف تعليقك هنا (اختياري)" rows="4"></textarea>
-                <button type="submit">إرسال التقييم</button>
-            </form>
-        </div>
-    <?php endforeach; ?>
+                    <textarea name="review" placeholder="أضف تعليقك هنا (اختياري)" rows="4"></textarea>
+                    <button type="submit">إرسال التقييم</button>
+                </form>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
 </div>
 
 <footer>

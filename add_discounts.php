@@ -1,8 +1,36 @@
 <?php
+session_start();
+
+// التحقق من أن المستخدم قد قام بتسجيل الدخول
+if (!isset($_SESSION['userID'])) {
+    echo "<script>alert('يرجى تسجيل الدخول أولاً.'); window.location.href='login.php';</script>";
+    exit;
+}
+
+// التحقق من أن المستخدم لديه دور admin
+try {
+    $db = new PDO("mysql:host=localhost;dbname=booking_system2", "root", "");
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // جلب دور المستخدم من قاعدة البيانات
+    $stmt = $db->prepare("SELECT role FROM users WHERE userid = :userid");
+    $stmt->bindParam(':userid', $_SESSION['userID'], PDO::PARAM_INT);
+    $stmt->execute();
+
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // إذا كان المستخدم ليس admin
+    if (!$user || $user['role'] != 'admin') {
+        echo "<script>alert('غير مصرح لك بالوصول إلى هذه الصفحة.'); window.location.href='home.php';</script>";
+        exit;
+    }
+} catch (PDOException $e) {
+    die("فشل الاتصال بقاعدة البيانات: " . $e->getMessage());
+}
+
+// استدعاء الملفات المطلوبة
 require_once 'Database.php';
 require_once 'Discount.php';
-
-session_start();
 
 // الاتصال بقاعدة البيانات
 try {
@@ -17,17 +45,33 @@ try {
 $message = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $discount->profession = $_POST['profession'];
-        $discount->discountAmount = $_POST['discount'];
-        $discount->description = $_POST['description'] ?? null;
+        $profession = $_POST['profession'];
+        $discountAmount = $_POST['discount'];
+        $description = $_POST['description'] ?? null;
 
-        if ($discount->addDiscount()) {
-            $message = "تمت إضافة الخصم بنجاح.";
+        // التحقق من وجود الخصم مسبقًا لنفس المهنة
+        $checkStmt = $conn->prepare("SELECT COUNT(*) FROM discounts WHERE profession = :profession");
+        $checkStmt->bindParam(':profession', $profession, PDO::PARAM_STR);
+        $checkStmt->execute();
+        $count = $checkStmt->fetchColumn();
+
+        if ($count > 0) {
+            // إذا كانت القيمة موجودة بالفعل
+            $message = "⚠️ المهنة '" . htmlspecialchars($profession) . "' تحتوي بالفعل على خصم.";
         } else {
-            $message = "فشل في إضافة الخصم.";
+            // إدخال الخصم إذا لم يكن موجودًا مسبقًا
+            $discount->profession = $profession;
+            $discount->discountAmount = $discountAmount;
+            $discount->description = $description;
+
+            if ($discount->addDiscount()) {
+                $message = "✅ تمت إضافة الخصم بنجاح.";
+            } else {
+                $message = "❌ فشل في إضافة الخصم.";
+            }
         }
     } catch (Exception $e) {
-        $message = "⚠️ " . $e->getMessage();
+        $message = "⚠️ حدث خطأ: " . $e->getMessage();
     }
 }
 ?>
@@ -97,6 +141,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button:hover {
             background-color: #0056b3;
         }
+        .message {
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
         footer {
             text-align: center;
             margin-top: 20px;
@@ -122,9 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="container">
     <h2>إضافة خصم جديد</h2>
 
-    <?php if (!empty($message)) echo "<p>$message</p>"; ?>
+    <?php if (!empty($message)): ?>
+        <div class="message <?= strpos($message, '⚠️') !== false ? 'error' : 'success' ?>">
+            <?= htmlspecialchars($message); ?>
+        </div>
+    <?php endif; ?>
 
-    <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="post">
+    <form action="<?= htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="post">
         <label for="profession">اختر المهنة:</label>
         <select name="profession" id="profession" required>
             <option value="">-- اختر المهنة --</option>

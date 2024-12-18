@@ -13,6 +13,26 @@ require 'Database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
+// جلب اسم المستخدم من قاعدة البيانات
+$userId = $_SESSION['userID'];
+$username = "";
+
+try {
+    $query = "SELECT username FROM users WHERE userid = :user_id";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($result) {
+        $username = $result['username'];
+    } else {
+        $username = "مستخدم مجهول"; // إذا لم يتم العثور على الاسم
+    }
+} catch (Exception $e) {
+    die("خطأ أثناء جلب بيانات المستخدم: " . $e->getMessage());
+}
+
 // عرض الإشعار العام إذا كان موجودًا
 $notification = "";
 if (isset($_SESSION['notification'])) {
@@ -21,7 +41,6 @@ if (isset($_SESSION['notification'])) {
 }
 
 // جلب جميع الإشعارات العامة والخاصة بالمستخدم
-$userId = $_SESSION['userID'];
 $notifications = [];
 try {
     $query = "
@@ -98,18 +117,6 @@ try {
             margin-bottom: 10px;
             border-radius: 5px;
         }
-        .user-notification h3 {
-            margin: 0;
-            color: #007bff;
-        }
-        .user-notification p {
-            margin: 5px 0;
-            color: #333;
-        }
-        .user-notification span {
-            color: #666;
-            font-size: 0.9em;
-        }
         h2 {
             color: #007bff;
         }
@@ -138,16 +145,17 @@ try {
 </nav>
 
 <div class="container">
+    <!-- رسالة الترحيب -->
+    <h2>مرحبًا بك يا <?= htmlspecialchars($username); ?>!</h2>
+    <p>يمكنك حجز التذاكر التي ترغب بها.</p>
+    <p>اختر أحد الخيارات في الأعلى للبدء.</p>
+
     <!-- عرض الإشعار العام إذا كان موجودًا -->
     <?php if ($notification): ?>
         <div class="notification">
             <?= htmlspecialchars($notification); ?>
         </div>
     <?php endif; ?>
-
-    <h2>مرحبًا بك في نظام الحجز!</h2>
-    <p>يمكنك حجز التذاكر التي ترغب بها.</p>
-    <p>اختر أحد الخيارات في الأعلى للبدء.</p>
 
     <h2>إشعاراتك:</h2>
     <?php if (!empty($notifications)): ?>

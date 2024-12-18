@@ -23,16 +23,21 @@ $discount = 0; // نسبة الخصم الافتراضية
 if (isset($_SESSION['userid'])) {
     $userid = $_SESSION['userid'];
 
-    // جلب الخصم بناءً على مهنة المستخدم
+    // جلب المهنة بناءً على المستخدم
     $query = "
-        SELECT d.DiscountAmount 
+        SELECT u.Profession, d.DiscountAmount 
         FROM users u
-        LEFT JOIN discounts d ON u.DiscountID = d.DiscountID
+        LEFT JOIN discounts d ON u.Profession = d.Profession
         WHERE u.userid = :userid";
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':userid', $userid, PDO::PARAM_INT);
     $stmt->execute();
-    $discount = $stmt->fetchColumn() ?? 0;
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result) {
+        // الحصول على الخصم بناءً على المهنة
+        $discount = $result['DiscountAmount'] ?? 0;  // في حال لم يوجد خصم للمهنة
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -57,8 +62,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->execute();
         $eventName = $stmt->fetchColumn();
 
-        $query = "INSERT INTO bookings (userid, phone, seatType, eventName, ticketPrice, ticketCount)
-                  VALUES (:userid, :phone, :seatType, :eventName, :ticketPrice, :ticketCount)";
+        // تطبيق الخصم عند حساب السعر
+        $discountedPrice = $totalPrice - ($totalPrice * $discount / 100);
+
+        // إدخال الحجز في قاعدة البيانات
+        $query = "INSERT INTO bookings (userid, phone, seatType, eventName, ticketPrice, ticketCount, totalPriceAfterDiscount)
+                  VALUES (:userid, :phone, :seatType, :eventName, :ticketPrice, :ticketCount, :discountedPrice)";
         $stmt = $conn->prepare($query);
         $stmt->bindParam(':userid', $userid, PDO::PARAM_INT);
         $stmt->bindParam(':phone', $phone, PDO::PARAM_STR);
@@ -66,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->bindParam(':eventName', $eventName, PDO::PARAM_STR);
         $stmt->bindParam(':ticketPrice', $ticketPrice, PDO::PARAM_STR);
         $stmt->bindParam(':ticketCount', $ticketCount, PDO::PARAM_INT);
+        $stmt->bindParam(':discountedPrice', $discountedPrice, PDO::PARAM_STR);
         $stmt->execute();
 
         $_SESSION['last_booking_id'] = $conn->lastInsertId();
